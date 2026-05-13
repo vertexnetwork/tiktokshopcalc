@@ -17,19 +17,19 @@
   "dependencies": {
     "@vercel/analytics": "^1.4.1",
     "@vercel/speed-insights": "^1.1.0",
-    "next": "^15.1.6",
+    "next": "^16.2.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@next/mdx": "^15.1.6",
+    "@next/mdx": "^16.2.6",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/mdx": "^2.0.13",
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "eslint": "^9.17.0",
-    "eslint-config-next": "^15.1.6",
+    "eslint-config-next": "^16.2.6",
     "postcss": "^8.5.1",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-slug": "^6.0.0",
