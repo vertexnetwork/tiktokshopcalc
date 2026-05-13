@@ -31,7 +31,7 @@ export default function EmbedPage() {
         }}
       >
         <iframe
-          src="/embed/calculator"
+          src="/embed-iframe"
           title={`${siteConfig.name} embedded calculator`}
           style={{ width: "100%", height: "100%", border: 0, borderRadius: 8 }}
         />
@@ -42,8 +42,14 @@ export default function EmbedPage() {
         <li>Free for any non-commercial site, blog, or course.</li>
         <li>Keep the &quot;Powered by {siteConfig.name}&quot; attribution visible.</li>
         <li>
-          Don&apos;t modify the iframe content to misrepresent the source of the math (the source
-          is open at <a href={siteConfig.github.repoUrl}>{siteConfig.github.repoUrl}</a>).
+          Don&apos;t modify the iframe content to misrepresent the source of the math.
+          {siteConfig.github.public && (
+            <>
+              {" "}
+              The source is open at{" "}
+              <a href={siteConfig.github.repoUrl}>{siteConfig.github.repoUrl}</a>.
+            </>
+          )}
         </li>
       </ul>
     </div>

@@ -7,6 +7,10 @@ import { Calculator } from "@/components/calc/Calculator";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { financeApplicationJsonLd, breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
 import { CATEGORIES } from "@/lib/categories";
+import { computeInitialCalcState } from "@/lib/calc-init";
+import { FEE_ENGINE_VERSION } from "@/lib/fee-engine";
+
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 export const metadata: Metadata = {
   title: `${siteConfig.tagline} — ${siteConfig.name}`,
@@ -32,7 +36,9 @@ const homeFaqs = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams;
+  const initial = computeInitialCalcState(undefined, params);
   return (
     <>
       <JsonLd
@@ -73,11 +79,32 @@ export default function HomePage() {
               creator commission, FBT fulfillment, refund admin, return-shipping reserve — they
               compound fast. Adjust the inputs below and watch the waterfall.
             </p>
+            <div className="trust-strip" aria-label="Sources behind the math">
+              <span className="trust-strip-label">Sourced from</span>
+              <span className="trust-strip-item">TikTok Seller University</span>
+              <span className="trust-strip-sep" aria-hidden>
+                ·
+              </span>
+              <span className="trust-strip-item">4 reconciled calculators</span>
+              <span className="trust-strip-sep" aria-hidden>
+                ·
+              </span>
+              <span className="trust-strip-item">2026 rate schedule</span>
+              <span className="trust-strip-sep" aria-hidden>
+                ·
+              </span>
+              <span className="trust-strip-item">
+                Updated{" "}
+                <time dateTime={FEE_ENGINE_VERSION.replace(/\./g, "-")}>
+                  {FEE_ENGINE_VERSION.replace(/\./g, "-")}
+                </time>
+              </span>
+            </div>
           </div>
         </section>
 
         <section className="container-page" style={{ padding: "0 1.25rem 4rem" }}>
-          <Calculator />
+          <Calculator initial={initial} />
         </section>
 
         <section className="container-page" style={{ padding: "0 1.25rem 4rem" }}>

@@ -20,12 +20,14 @@ export default function ContactPage() {
           <a href={`mailto:${siteConfig.supportEmail}`}>{siteConfig.supportEmail}</a>
         </p>
       </div>
-      <div className="card" style={{ padding: "1.5rem", marginTop: "1rem" }}>
-        <p style={{ margin: 0, color: "var(--color-muted)" }}>GitHub Issues</p>
-        <p style={{ margin: "0.25rem 0 0", fontSize: "1.125rem" }}>
-          <a href={`${siteConfig.github.repoUrl}/issues`}>{siteConfig.github.repoUrl}/issues</a>
-        </p>
-      </div>
+      {siteConfig.github.public && (
+        <div className="card" style={{ padding: "1.5rem", marginTop: "1rem" }}>
+          <p style={{ margin: 0, color: "var(--color-muted)" }}>GitHub Issues</p>
+          <p style={{ margin: "0.25rem 0 0", fontSize: "1.125rem" }}>
+            <a href={`${siteConfig.github.repoUrl}/issues`}>{siteConfig.github.repoUrl}/issues</a>
+          </p>
+        </div>
+      )}
     </div>
   );
 }

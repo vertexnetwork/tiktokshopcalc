@@ -13,25 +13,46 @@ export const metadata: Metadata = {
 };
 
 export default function CategoriesIndex() {
-  const tier1 = CATEGORIES.filter((c) => c.l1 === "Beauty & Personal Care");
-  const tier2 = CATEGORIES.filter((c) => c.l1 === "Health" || c.slug === "weighted-plush" || c.slug === "whitening-strips");
-  const tier3 = CATEGORIES.filter(
-    (c) =>
-      ["Home Supplies", "Textiles & Soft Furnishings", "Kitchenware", "Phones & Electronics"].includes(c.l1) &&
-      !tier1.some((x) => x.slug === c.slug) &&
-      !tier2.some((x) => x.slug === c.slug),
+  // Build tiers with a strict slug-uniqueness pass so a slug claimed by tier1
+  // (e.g. whitening-strips → Beauty) cannot reappear in tier2's wellness pull.
+  const taken = new Set<string>();
+  const claim = (cats: typeof CATEGORIES) => {
+    const out: typeof CATEGORIES = [];
+    for (const c of cats) {
+      if (taken.has(c.slug)) continue;
+      taken.add(c.slug);
+      out.push(c);
+    }
+    return out;
+  };
+
+  const tier1 = claim(CATEGORIES.filter((c) => c.l1 === "Beauty & Personal Care"));
+  const tier2 = claim(
+    CATEGORIES.filter(
+      (c) => c.l1 === "Health" || c.slug === "weighted-plush" || c.slug === "whitening-strips",
+    ),
   );
-  const tier4 = CATEGORIES.filter(
-    (c) =>
-      ["Womenswear & Underwear", "Fashion Accessories", "Jewelry Accessories & Derivatives", "Shoes"].includes(c.l1),
+  const tier3 = claim(
+    CATEGORIES.filter((c) =>
+      [
+        "Home Supplies",
+        "Textiles & Soft Furnishings",
+        "Kitchenware",
+        "Phones & Electronics",
+      ].includes(c.l1),
+    ),
   );
-  const remaining = CATEGORIES.filter(
-    (c) =>
-      !tier1.some((x) => x.slug === c.slug) &&
-      !tier2.some((x) => x.slug === c.slug) &&
-      !tier3.some((x) => x.slug === c.slug) &&
-      !tier4.some((x) => x.slug === c.slug),
+  const tier4 = claim(
+    CATEGORIES.filter((c) =>
+      [
+        "Womenswear & Underwear",
+        "Fashion Accessories",
+        "Jewelry Accessories & Derivatives",
+        "Shoes",
+      ].includes(c.l1),
+    ),
   );
+  const remaining = claim(CATEGORIES);
 
   const groups: { title: string; subtitle: string; items: typeof CATEGORIES }[] = [
     {

@@ -11,10 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:pseo": "tsx scripts/generate-pseo.ts",
     "generate:changelog": "tsx scripts/build-changelog.ts",
-    "generate:llms": "tsx scripts/build-llms-txt.ts && tsx scripts/build-llms-full-txt.ts",
-    "prebuild": "tsx scripts/generate-pseo.ts && tsx scripts/build-changelog.ts"
+    "prebuild": "tsx scripts/build-changelog.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^1.4.1",

@@ -4,16 +4,7 @@ import { Wordmark } from "@/components/brand/Wordmark";
 
 export function SiteHeader() {
   return (
-    <header
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 20,
-        background: "color-mix(in oklab, var(--color-bg) 88%, transparent)",
-        backdropFilter: "blur(8px)",
-        borderBottom: "1px solid var(--color-border)",
-      }}
-    >
+    <header className="site-header">
       <div
         className="container-page"
         style={{
@@ -32,7 +23,8 @@ export function SiteHeader() {
           <Wordmark />
         </Link>
 
-        {/* Desktop nav — visible at >=640px */}
+        {/* Desktop nav — visible at >=640px. No sales button here:
+            the calculator's post-result CTA is the moment of intent. */}
         <nav
           aria-label="Primary"
           className="primary-nav"
@@ -52,13 +44,6 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <a
-            href={siteConfig.monetization.gumroad.productUrl + "?utm_source=tiktokshopcalc&utm_medium=header"}
-            className="btn-primary"
-            style={{ padding: "0.5rem 1rem", fontSize: "0.875rem" }}
-          >
-            Margin Bible — ${siteConfig.monetization.gumroad.price}
-          </a>
         </nav>
 
         {/* Mobile menu — zero-JS <details> */}
@@ -124,13 +109,6 @@ export function SiteHeader() {
                 {item.label}
               </Link>
             ))}
-            <a
-              href={siteConfig.monetization.gumroad.productUrl + "?utm_source=tiktokshopcalc&utm_medium=mobile-header"}
-              className="btn-primary"
-              style={{ marginTop: "0.5rem", justifyContent: "center" }}
-            >
-              Margin Bible — ${siteConfig.monetization.gumroad.price}
-            </a>
           </nav>
         </details>
       </div>

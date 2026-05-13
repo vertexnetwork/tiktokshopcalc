@@ -102,11 +102,13 @@ export function SiteFooter() {
             Part of the Vertex Network
           </Link>
         </p>
-        <p className="text-muted" style={{ fontSize: "0.75rem", margin: 0 }}>
-          <a href={siteConfig.github.repoUrl} target="_blank" rel="noopener noreferrer">
-            Open source
-          </a>
-        </p>
+        {siteConfig.github.public && (
+          <p className="text-muted" style={{ fontSize: "0.75rem", margin: 0 }}>
+            <a href={siteConfig.github.repoUrl} target="_blank" rel="noopener noreferrer">
+              Open source
+            </a>
+          </p>
+        )}
       </div>
     </footer>
   );

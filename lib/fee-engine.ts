@@ -101,15 +101,18 @@ const SPS_LT4_SELLER_SHARE = 0.5;
 const CASHOUT_FEE = 0.05;
 
 /**
- * FBT rate card (0-4lb tier confirmed in the official Jan 8 2026 update;
- * heavier tiers are placeholders pending official table extraction).
- * The 24% multi-unit discount applies only to the 0-4lb tier per the
- * Jan 12, 2026 update.
+ * FBT rate card. The 0-4lb tier base ($3.58) and its 24% multi-unit discount
+ * are both confirmed by the official Jan 8 / Jan 12 2026 updates.
+ *
+ * Heavier-tier base rates are conservative placeholders pending extraction
+ * of the full official table. The multi-unit discount IS explicitly only
+ * documented for the 0-4lb tier — heavier tiers stay at 0 here so we never
+ * understate the fee a heavier-tier seller will actually pay.
  */
 const FBT_RATE_CARD: Record<WeightTier, { base: number; multiUnitDiscount: number }> = {
   "0-4lb": { base: 3.58, multiUnitDiscount: 0.24 },
-  "4-10lb": { base: 5.5, multiUnitDiscount: 0.1 },
-  "10-30lb": { base: 8.5, multiUnitDiscount: 0.05 },
+  "4-10lb": { base: 5.5, multiUnitDiscount: 0 },
+  "10-30lb": { base: 8.5, multiUnitDiscount: 0 },
   "30lb+": { base: 14.0, multiUnitDiscount: 0 },
 };
 
@@ -241,6 +244,11 @@ export function calcFees(input: FeeInput): FeeBreakdown {
   if (input.creatorPlan === "Targeted" && creatorPct >= 0.25 && marginPct < 0.15) {
     warnings.push(
       "Targeted commission ≥25% with margin under 15% — consider switching to Open Plan or trimming commission.",
+    );
+  }
+  if (input.creatorPlan !== "None" && creatorPct > 0) {
+    warnings.push(
+      "Creator commission is locked for 30 days once a campaign is live — you can raise it any time, but you cannot drop it until the lock clears. Model the worst case before you publish.",
     );
   }
   if (platformDiscount > 0) {

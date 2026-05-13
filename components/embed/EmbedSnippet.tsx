@@ -5,7 +5,7 @@ import { siteConfig } from "@/lib/site-config";
 
 export function EmbedSnippet() {
   const [copied, setCopied] = useState(false);
-  const snippet = `<iframe src="${siteConfig.url}/embed/calculator" title="${siteConfig.name}" style="width:100%;min-height:720px;border:0;border-radius:12px;" loading="lazy"></iframe>`;
+  const snippet = `<iframe src="${siteConfig.url}/embed-iframe" title="${siteConfig.name}" style="width:100%;min-height:720px;border:0;border-radius:12px;" loading="lazy"></iframe>`;
 
   function copy() {
     navigator.clipboard.writeText(snippet).then(

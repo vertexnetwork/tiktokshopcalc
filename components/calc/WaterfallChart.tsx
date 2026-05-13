@@ -43,8 +43,8 @@ export function WaterfallChart({ steps }: WaterfallChartProps) {
     >
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        preserveAspectRatio="none"
-        style={{ width: "100%", height: HEIGHT, display: "block" }}
+        preserveAspectRatio="xMidYMid meet"
+        style={{ width: "100%", height: "auto", maxHeight: HEIGHT, display: "block" }}
       >
         {/* baseline at 0 */}
         <line

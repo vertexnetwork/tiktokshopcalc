@@ -45,13 +45,20 @@ export default function AboutPage() {
 
         <h2 style={{ marginTop: "2.5rem" }}>How the math works</h2>
         <p>
-          The calculation engine lives in a single file:{" "}
-          <Link href={`${siteConfig.github.repoUrl}/blob/main/lib/fee-engine.ts`}>
-            lib/fee-engine.ts
-          </Link>
-          . It&apos;s a pure function — same input, same output, always — and the 40+ golden test
-          cases in <code>fee-engine.test.ts</code> are the contract. If you spot a fee we&apos;re
-          modeling wrong, file an issue in the public repo.
+          The calculation engine lives in a single pure module —{" "}
+          <code>lib/fee-engine.ts</code> — with 40+ golden test cases that act as its contract.
+          Same inputs, same outputs, always.{" "}
+          {siteConfig.github.public ? (
+            <>
+              You can read the full source at{" "}
+              <Link href={`${siteConfig.github.repoUrl}/blob/main/lib/fee-engine.ts`}>
+                {siteConfig.github.repoUrl.replace("https://github.com/", "")}/lib/fee-engine.ts
+              </Link>
+              .
+            </>
+          ) : (
+            <>The source goes public alongside our v1 launch.</>
+          )}
         </p>
 
         <h2 style={{ marginTop: "2.5rem" }}>Trademarks</h2>

@@ -18,9 +18,6 @@ const nextConfig: NextConfig = {
   experimental: {
     mdxRs: false,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   async headers() {
     const csp = buildCSP({
       vercelAnalytics: true,
@@ -30,9 +27,12 @@ const nextConfig: NextConfig = {
       clarity: !!process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID,
       plausible: !!process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN,
     });
+    // /embed-iframe is the only route partner sites are allowed to embed —
+    // it's the bare iframe page, separated from the (site) chrome. All other
+    // routes (including the /embed docs page) ship X-Frame-Options DENY.
     return [
       {
-        source: "/((?!embed).*)",
+        source: "/((?!embed-iframe).*)",
         headers: [
           { key: "Content-Security-Policy", value: csp },
           { key: "X-Frame-Options", value: "DENY" },
@@ -43,7 +43,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/embed/:path*",
+        source: "/embed-iframe",
         headers: [
           { key: "Content-Security-Policy", value: csp.replace("frame-ancestors 'self'", "frame-ancestors *") },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

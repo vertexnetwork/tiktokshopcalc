@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   calcFees,
   type FeeInput,
@@ -10,90 +10,147 @@ import {
   type ShopPerformanceScore,
 } from "@/lib/fee-engine";
 import { CATEGORIES, getCategory } from "@/lib/categories";
-import { decodeShareState } from "@/lib/share";
+import { defaultsForCategory, type CalcInitial } from "@/lib/calc-init";
 import { WaterfallChart } from "./WaterfallChart";
 import { FeeBreakdownTable } from "./FeeBreakdownTable";
 import { ScenarioCallouts } from "./ScenarioCallouts";
 import { ShareButton } from "./ShareButton";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { fmtUSD, fmtPct } from "@/lib/format";
 import { siteConfig } from "@/lib/site-config";
 
 interface CalculatorProps {
-  categorySlug?: string;
+  initial: CalcInitial;
   embedded?: boolean;
 }
 
-function defaultsForCategory(slug: string): FeeInput {
-  const cat = getCategory(slug) || CATEGORIES[1];
+type NumericKey =
+  | "sellingPrice"
+  | "units"
+  | "cogs"
+  | "shippingChargedToBuyer"
+  | "platformFundedDiscount"
+  | "sellerFundedDiscount"
+  | "expectedReturnShipCost";
+
+type RawNumeric = Record<NumericKey, string>;
+
+function toRawNumeric(input: FeeInput): RawNumeric {
   return {
-    sellingPrice: cat.defaults.sellingPrice,
-    units: 1,
-    cogs: cat.defaults.cogs,
-    shippingChargedToBuyer: 0,
-    referralRate: cat.rate,
-    logistics: "FBT",
-    weightTier: cat.weightTierDefault,
-    fbtMultiUnitDiscount: true,
-    creatorPlan: "Open",
-    creatorCommissionPct: cat.defaults.creatorPct,
-    refundRatePct: cat.defaults.refundRatePct,
-    shopPerformanceScore: "ge4",
-    expectedReturnShipCost: 8,
-    newSellerPromo: false,
-    sellerFundedDiscount: 0,
-    platformFundedDiscount: 0,
-    salesTaxOnReferralFee: false,
-    buyerStateTaxRate: 0,
-    includeCashoutFee: false,
+    sellingPrice: String(input.sellingPrice),
+    units: String(input.units),
+    cogs: String(input.cogs),
+    shippingChargedToBuyer: String(input.shippingChargedToBuyer),
+    platformFundedDiscount: String(input.platformFundedDiscount),
+    sellerFundedDiscount: String(input.sellerFundedDiscount),
+    expectedReturnShipCost: String(input.expectedReturnShipCost),
   };
 }
 
-export function Calculator({ categorySlug, embedded = false }: CalculatorProps) {
-  const initial = useMemo(
-    () => defaultsForCategory(categorySlug || "skincare"),
-    [categorySlug],
-  );
-  const [input, setInput] = useState<FeeInput>(initial);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [selectedSlug, setSelectedSlug] = useState<string>(categorySlug || "skincare");
+interface FieldConfig {
+  min: number;
+  integer?: boolean;
+}
 
-  // Hydrate from ?s= or ?cat=
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const s = params.get("s");
-    if (s) {
-      const decoded = decodeShareState(s);
-      setInput((prev) => ({ ...prev, ...decoded } as FeeInput));
-      return;
-    }
-    const cat = params.get("cat");
-    if (cat) {
-      setSelectedSlug(cat);
-      setInput(defaultsForCategory(cat));
-    }
-  }, []);
+const NUMERIC_CONFIG: Record<NumericKey, FieldConfig> = {
+  sellingPrice: { min: 0 },
+  units: { min: 1, integer: true },
+  cogs: { min: 0 },
+  shippingChargedToBuyer: { min: 0 },
+  platformFundedDiscount: { min: 0 },
+  sellerFundedDiscount: { min: 0 },
+  expectedReturnShipCost: { min: 0 },
+};
+
+function validateNumeric(key: NumericKey, raw: string): { value: number | null; error: string | null } {
+  const cfg = NUMERIC_CONFIG[key];
+  const trimmed = raw.trim();
+  if (trimmed === "") return { value: null, error: "Required" };
+  const cleaned = trimmed.replace(/,/g, "");
+  const parsed = cfg.integer ? parseInt(cleaned, 10) : parseFloat(cleaned);
+  if (!Number.isFinite(parsed)) return { value: null, error: "Enter a number" };
+  if (parsed < cfg.min) return { value: null, error: `Min ${cfg.min}` };
+  if (cfg.integer && !Number.isInteger(parsed)) return { value: null, error: "Whole number only" };
+  return { value: parsed, error: null };
+}
+
+export function Calculator({ initial, embedded = false }: CalculatorProps) {
+  const [{ input, selectedSlug }, setState] = useState(() => ({
+    input: initial.input,
+    selectedSlug: initial.selectedSlug,
+  }));
+  const [raw, setRaw] = useState<RawNumeric>(() => toRawNumeric(initial.input));
+  const [errors, setErrors] = useState<Partial<Record<NumericKey, string>>>({});
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const r = useMemo(() => calcFees(input), [input]);
 
+  function setInput(updater: (prev: FeeInput) => FeeInput) {
+    setState((prev) => ({ ...prev, input: updater(prev.input) }));
+  }
+
   function onCategoryChange(slug: string) {
-    setSelectedSlug(slug);
     const cat = getCategory(slug);
     if (!cat) return;
-    setInput((prev) => ({
-      ...prev,
-      sellingPrice: cat.defaults.sellingPrice,
-      cogs: cat.defaults.cogs,
-      referralRate: cat.rate,
-      weightTier: cat.weightTierDefault,
-      creatorCommissionPct: cat.defaults.creatorPct,
-      refundRatePct: cat.defaults.refundRatePct,
+    setState((prev) => ({
+      selectedSlug: slug,
+      input: {
+        ...prev.input,
+        sellingPrice: cat.defaults.sellingPrice,
+        cogs: cat.defaults.cogs,
+        referralRate: cat.rate,
+        weightTier: cat.weightTierDefault,
+        creatorCommissionPct: cat.defaults.creatorPct,
+        refundRatePct: cat.defaults.refundRatePct,
+      },
     }));
+    setRaw((prev) => ({
+      ...prev,
+      sellingPrice: String(cat.defaults.sellingPrice),
+      cogs: String(cat.defaults.cogs),
+    }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.sellingPrice;
+      delete next.cogs;
+      return next;
+    });
   }
 
   function update<K extends keyof FeeInput>(key: K, value: FeeInput[K]) {
     setInput((prev) => ({ ...prev, [key]: value }));
   }
+
+  function updateNumeric(key: NumericKey, rawValue: string) {
+    setRaw((prev) => ({ ...prev, [key]: rawValue }));
+    const { value, error } = validateNumeric(key, rawValue);
+    setErrors((prev) => {
+      const next = { ...prev };
+      if (error) next[key] = error;
+      else delete next[key];
+      return next;
+    });
+    if (value !== null) {
+      setInput((prev) => ({ ...prev, [key]: value }));
+    }
+  }
+
+  function resetToDefaults() {
+    const fresh = defaultsForCategory(selectedSlug);
+    setState({ input: fresh, selectedSlug });
+    setRaw(toRawNumeric(fresh));
+    setErrors({});
+  }
+
+  const hasErrors = Object.keys(errors).length > 0;
+
+  const ctaUrl = `${siteConfig.monetization.gumroad.productUrl}?utm_source=tiktokshopcalc&utm_medium=calc-cta&utm_campaign=${selectedSlug}`;
+  // Outcome-bridging copy: speaks to the post-shock state the seller is in
+  // after watching their own margin drop. Doesn't lead with the price.
+  const ctaLabel = `See your margin survive a viral order — $${siteConfig.monetization.gumroad.price} Bible`;
+  // The sticky bar repeats the offer in a softer, fact-style register so it
+  // reads as a footer note instead of a second sales pitch.
+  const stickyCtaLabel = `Margin Bible · $${siteConfig.monetization.gumroad.price} · 14-day refund`;
 
   return (
     <div
@@ -113,7 +170,25 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
       >
         {/* ===== INPUTS ===== */}
         <div className="card" style={{ padding: "1.5rem" }}>
-          <h2 style={{ marginTop: 0, marginBottom: "1rem", fontSize: "1.125rem" }}>Inputs</h2>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "1rem",
+              gap: "0.5rem",
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: "1.125rem" }}>Inputs</h2>
+            <button
+              type="button"
+              className="btn-ghost-sm"
+              onClick={resetToDefaults}
+              aria-label="Reset all inputs to category defaults"
+            >
+              Reset
+            </button>
+          </div>
 
           <Field label="Category">
             <select
@@ -130,55 +205,45 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
           </Field>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <Field label="Selling price (USD)">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="input"
-                value={input.sellingPrice}
-                onChange={(e) => update("sellingPrice", parseFloat(e.target.value) || 0)}
-              />
-            </Field>
-            <Field label="Units per order">
-              <input
-                type="number"
-                step="1"
-                min="1"
-                className="input"
-                value={input.units}
-                onChange={(e) => update("units", parseInt(e.target.value, 10) || 1)}
-              />
-            </Field>
+            <NumberField
+              label="Selling price (USD)"
+              fieldKey="sellingPrice"
+              raw={raw.sellingPrice}
+              error={errors.sellingPrice}
+              onChange={updateNumeric}
+              inputMode="decimal"
+              step="0.01"
+            />
+            <NumberField
+              label="Units per order"
+              fieldKey="units"
+              raw={raw.units}
+              error={errors.units}
+              onChange={updateNumeric}
+              inputMode="numeric"
+              step="1"
+            />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <Field label="Cost of goods (per unit)">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="input"
-                value={input.cogs}
-                onChange={(e) => update("cogs", parseFloat(e.target.value) || 0)}
-              />
-            </Field>
-            <Field label="Shipping charged to buyer">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                className="input"
-                value={input.shippingChargedToBuyer}
-                onChange={(e) =>
-                  update("shippingChargedToBuyer", parseFloat(e.target.value) || 0)
-                }
-              />
-            </Field>
-          </div>
+          <NumberField
+            label="Cost of goods (per unit)"
+            fieldKey="cogs"
+            raw={raw.cogs}
+            error={errors.cogs}
+            onChange={updateNumeric}
+            inputMode="decimal"
+            step="0.01"
+          />
 
           <Field
             label={`Creator plan & commission (${(input.creatorCommissionPct * 100).toFixed(0)}%)`}
+            tooltip={
+              <>
+                <strong>Open</strong>: creators can promote without your approval (5–15% commission).
+                <br />
+                <strong>Targeted</strong>: you invite specific creators with higher commissions (15–30%+).
+              </>
+            }
           >
             <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "0.5rem" }}>
               <select
@@ -216,7 +281,18 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
             />
           </Field>
 
-          <Field label="Logistics">
+          <Field
+            label="Logistics"
+            tooltip={
+              <>
+                <strong>FBT</strong> (Fulfilled by TikTok): TikTok warehouses and ships your inventory.
+                <br />
+                <strong>Upgraded TikTok Shipping</strong>: you ship, TikTok provides label discounts.
+                <br />
+                <strong>Collections by TikTok</strong>: TikTok picks up from your warehouse.
+              </>
+            }
+          >
             <select
               className="select"
               value={input.logistics}
@@ -225,19 +301,6 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
               <option value="FBT">FBT (Fulfilled by TikTok)</option>
               <option value="UpgradedTikTokShipping">Upgraded TikTok Shipping</option>
               <option value="CollectionsByTikTok">Collections by TikTok</option>
-            </select>
-          </Field>
-
-          <Field label="Weight tier">
-            <select
-              className="select"
-              value={input.weightTier}
-              onChange={(e) => update("weightTier", e.target.value as WeightTier)}
-            >
-              <option value="0-4lb">0–4 lb</option>
-              <option value="4-10lb">4–10 lb</option>
-              <option value="10-30lb">10–30 lb</option>
-              <option value="30lb+">30 lb+</option>
             </select>
           </Field>
 
@@ -250,6 +313,29 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
               Advanced
             </summary>
 
+            <Field label="Weight tier (drives FBT cost)">
+              <select
+                className="select"
+                value={input.weightTier}
+                onChange={(e) => update("weightTier", e.target.value as WeightTier)}
+              >
+                <option value="0-4lb">0–4 lb</option>
+                <option value="4-10lb">4–10 lb</option>
+                <option value="10-30lb">10–30 lb</option>
+                <option value="30lb+">30 lb+</option>
+              </select>
+            </Field>
+
+            <NumberField
+              label="Shipping charged to buyer (usually $0)"
+              fieldKey="shippingChargedToBuyer"
+              raw={raw.shippingChargedToBuyer}
+              error={errors.shippingChargedToBuyer}
+              onChange={updateNumeric}
+              inputMode="decimal"
+              step="0.01"
+            />
+
             <Toggle
               label="New seller (first 30 days — 3% referral)"
               value={input.newSellerPromo}
@@ -257,6 +343,7 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
             />
             <Toggle
               label="Shop Performance Score ≥ 4"
+              tooltip="TikTok's seller quality score (0–5). Shops below 4.0 lose access to Open creator program and pay higher refund-admin fees."
               value={input.shopPerformanceScore === "ge4"}
               onChange={(v) =>
                 update("shopPerformanceScore", (v ? "ge4" : "lt4") as ShopPerformanceScore)
@@ -264,6 +351,7 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
             />
             <Toggle
               label="FBT multi-unit discount (Jan 2026+)"
+              tooltip="As of Jan 2026, FBT orders with 2+ units of the same SKU get a per-unit fulfillment discount."
               value={input.fbtMultiUnitDiscount}
               onChange={(v) => update("fbtMultiUnitDiscount", v)}
             />
@@ -274,11 +362,19 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
             />
             <Toggle
               label="Sales tax on referral fee (Nov 2025+)"
+              tooltip="As of Nov 2025, TikTok charges sales tax on the referral fee itself in states that tax marketplace services."
               value={input.salesTaxOnReferralFee}
               onChange={(v) => update("salesTaxOnReferralFee", v)}
             />
 
-            {input.salesTaxOnReferralFee && (
+            <div
+              style={{
+                maxHeight: input.salesTaxOnReferralFee ? "200px" : "0",
+                overflow: "hidden",
+                transition: "max-height 180ms ease",
+              }}
+              aria-hidden={!input.salesTaxOnReferralFee}
+            >
               <Field label={`Buyer state tax rate (${(input.buyerStateTaxRate * 100).toFixed(2)}%)`}>
                 <input
                   type="range"
@@ -288,55 +384,56 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
                   value={input.buyerStateTaxRate}
                   onChange={(e) => update("buyerStateTaxRate", parseFloat(e.target.value))}
                   style={{ width: "100%" }}
-                />
-              </Field>
-            )}
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-              <Field label="Platform-funded discount">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="input"
-                  value={input.platformFundedDiscount}
-                  onChange={(e) =>
-                    update("platformFundedDiscount", parseFloat(e.target.value) || 0)
-                  }
-                />
-              </Field>
-              <Field label="Seller-funded discount">
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="input"
-                  value={input.sellerFundedDiscount}
-                  onChange={(e) =>
-                    update("sellerFundedDiscount", parseFloat(e.target.value) || 0)
-                  }
+                  tabIndex={input.salesTaxOnReferralFee ? 0 : -1}
                 />
               </Field>
             </div>
 
-            <Field label="Expected return shipping cost per refund">
-              <input
-                type="number"
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <NumberField
+                label="Platform-funded discount"
+                fieldKey="platformFundedDiscount"
+                raw={raw.platformFundedDiscount}
+                error={errors.platformFundedDiscount}
+                onChange={updateNumeric}
+                inputMode="decimal"
                 step="0.01"
-                min="0"
-                className="input"
-                value={input.expectedReturnShipCost}
-                onChange={(e) =>
-                  update("expectedReturnShipCost", parseFloat(e.target.value) || 0)
-                }
               />
-            </Field>
+              <NumberField
+                label="Seller-funded discount"
+                fieldKey="sellerFundedDiscount"
+                raw={raw.sellerFundedDiscount}
+                error={errors.sellerFundedDiscount}
+                onChange={updateNumeric}
+                inputMode="decimal"
+                step="0.01"
+              />
+            </div>
+
+            <NumberField
+              label="Expected return shipping cost per refund"
+              fieldKey="expectedReturnShipCost"
+              raw={raw.expectedReturnShipCost}
+              error={errors.expectedReturnShipCost}
+              onChange={updateNumeric}
+              inputMode="decimal"
+              step="0.01"
+            />
           </details>
         </div>
 
         {/* ===== RESULTS ===== */}
         <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="false"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+              gap: "0.75rem",
+            }}
+          >
             <Kpi
               label="Net profit"
               value={fmtUSD(r.netProfit)}
@@ -354,6 +451,38 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
               tone="info"
             />
           </div>
+
+          {hasErrors && (
+            <div
+              role="alert"
+              className="card"
+              style={{
+                padding: "0.75rem 1rem",
+                borderLeft: "3px solid var(--color-danger)",
+                background: "var(--color-surface-2)",
+                fontSize: "0.875rem",
+              }}
+            >
+              Fix the highlighted input{Object.keys(errors).length > 1 ? "s" : ""} — using last
+              valid value for now.
+            </div>
+          )}
+
+          {!embedded && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.75rem",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <a href={ctaUrl} className="btn-primary">
+                {ctaLabel}
+              </a>
+              <ShareButton input={input} />
+            </div>
+          )}
 
           {r.warnings.length > 0 && (
             <div
@@ -394,28 +523,15 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
 
           <FeeBreakdownTable r={r} />
 
-          <ScenarioCallouts input={input} r={r} />
-
-          {!embedded && (
-            <div
-              style={{
-                display: "flex",
-                gap: "0.75rem",
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <ShareButton input={input} />
-              <a
-                href={`${siteConfig.monetization.gumroad.productUrl}?utm_source=tiktokshopcalc&utm_medium=calc-cta&utm_campaign=${selectedSlug}`}
-                className="btn-primary"
-              >
-                Get every category in the Margin Bible — ${siteConfig.monetization.gumroad.price}
-              </a>
-            </div>
-          )}
+          {!embedded && <ScenarioCallouts input={input} r={r} />}
         </div>
       </div>
+
+      {!embedded && (
+        <a href={ctaUrl} className="sticky-mobile-cta" aria-label={stickyCtaLabel}>
+          {stickyCtaLabel}
+        </a>
+      )}
 
       <style>{`
         @media (max-width: 880px) {
@@ -426,12 +542,22 @@ export function Calculator({ categorySlug, embedded = false }: CalculatorProps) 
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+  tooltip,
+}: {
+  label: string;
+  children: React.ReactNode;
+  tooltip?: React.ReactNode;
+}) {
   return (
     <label style={{ display: "block", marginBottom: "0.75rem" }}>
       <span
         style={{
-          display: "block",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.375rem",
           fontSize: "0.75rem",
           color: "var(--color-muted)",
           textTransform: "uppercase",
@@ -440,8 +566,65 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
         }}
       >
         {label}
+        {tooltip && <Tooltip label={label}>{tooltip}</Tooltip>}
       </span>
       {children}
+    </label>
+  );
+}
+
+function NumberField({
+  label,
+  fieldKey,
+  raw,
+  error,
+  onChange,
+  inputMode,
+  step,
+  tooltip,
+}: {
+  label: string;
+  fieldKey: NumericKey;
+  raw: string;
+  error?: string;
+  onChange: (key: NumericKey, value: string) => void;
+  inputMode: "decimal" | "numeric";
+  step: string;
+  tooltip?: React.ReactNode;
+}) {
+  const errorId = error ? `${fieldKey}-error` : undefined;
+  return (
+    <label style={{ display: "block", marginBottom: "0.75rem" }}>
+      <span
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.375rem",
+          fontSize: "0.75rem",
+          color: "var(--color-muted)",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          marginBottom: "0.25rem",
+        }}
+      >
+        {label}
+        {tooltip && <Tooltip label={label}>{tooltip}</Tooltip>}
+      </span>
+      <input
+        type="text"
+        inputMode={inputMode}
+        step={step}
+        className={`input ${error ? "input-error" : ""}`}
+        value={raw}
+        onChange={(e) => onChange(fieldKey, e.target.value)}
+        aria-invalid={!!error}
+        aria-describedby={errorId}
+      />
+      {error && (
+        <span id={errorId} className="field-error-msg" role="alert">
+          {error}
+        </span>
+      )}
     </label>
   );
 }
@@ -450,24 +633,29 @@ function Toggle({
   label,
   value,
   onChange,
+  tooltip,
 }: {
   label: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  tooltip?: React.ReactNode;
 }) {
   return (
-    <label
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "0.5rem",
-        padding: "0.375rem 0",
-        cursor: "pointer",
-      }}
-    >
-      <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
-      <span style={{ fontSize: "0.875rem" }}>{label}</span>
-    </label>
+    <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.375rem 0" }}>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          cursor: "pointer",
+          flex: 1,
+        }}
+      >
+        <input type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
+        <span style={{ fontSize: "0.875rem" }}>{label}</span>
+      </label>
+      {tooltip && <Tooltip label={label}>{tooltip}</Tooltip>}
+    </div>
   );
 }
 

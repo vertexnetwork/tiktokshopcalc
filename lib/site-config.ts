@@ -83,6 +83,10 @@ export const siteConfig = {
 
   github: {
     repoUrl: "https://github.com/vertexnetwork/tiktokshopcalc",
+    // Flip to "1" after the public repo is live. Until then the audit-driven
+    // "Open source" / "GitHub Issues" links stay hidden so we don't ship dead
+    // anchors that destroy the trust we built everywhere else.
+    public: process.env.NEXT_PUBLIC_GITHUB_PUBLIC === "1",
   },
 
   features: {

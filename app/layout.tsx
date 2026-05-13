@@ -35,11 +35,12 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true, "max-image-preview": "large" },
   icons: {
+    // /apple-icon.png is generated dynamically by app/apple-icon.tsx (next/og)
+    // so we don't reference a static file that doesn't exist on disk.
     icon: [
       { url: "/favicon.ico", sizes: "any" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
-    apple: "/apple-icon.png",
   },
   manifest: "/manifest.webmanifest",
 };

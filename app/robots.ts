@@ -10,12 +10,11 @@ interface AiBotsConfig {
 
 export default function robots(): MetadataRoute.Robots {
   const cfg = aiBots as AiBotsConfig;
-  const rules: MetadataRoute.Robots["rules"] = [
-    { userAgent: "*", allow: "/" },
-  ];
-  for (const bot of cfg.allow || []) {
-    rules.push({ userAgent: bot, allow: "/" });
-  }
+  // Default-allow stance for the wildcard. Per-bot ALLOW entries are
+  // redundant under that default, so we only emit per-bot rules when the
+  // ai-bots manifest lists a bot in `disallow` — that's where the file
+  // actually changes crawler behavior.
+  const rules: MetadataRoute.Robots["rules"] = [{ userAgent: "*", allow: "/" }];
   for (const bot of cfg.disallow || []) {
     rules.push({ userAgent: bot, disallow: "/" });
   }

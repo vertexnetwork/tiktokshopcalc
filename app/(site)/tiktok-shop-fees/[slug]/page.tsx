@@ -13,10 +13,14 @@ import {
 } from "@/lib/seo";
 import { fmtUSD } from "@/lib/format";
 import { calcFees } from "@/lib/fee-engine";
+import { computeInitialCalcState } from "@/lib/calc-init";
+import { generatePseoCopy } from "@/lib/pseo-copy";
 
 interface Params {
   slug: string;
 }
+
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
 export async function generateStaticParams(): Promise<Params[]> {
   return CATEGORIES.map((c) => ({ slug: c.slug }));
@@ -51,10 +55,17 @@ export async function generateMetadata(
   };
 }
 
-export default async function PseoPage({ params }: { params: Promise<Params> }) {
-  const { slug } = await params;
+export default async function PseoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>;
+  searchParams: SearchParams;
+}) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const cat = getCategory(slug);
   if (!cat) notFound();
+  const initial = computeInitialCalcState(slug, sp);
 
   const scenarios = [
     { name: "Low — conservative listing", price: cat.defaults.sellingPrice * 0.7, cogs: cat.defaults.cogs },
@@ -90,20 +101,12 @@ export default async function PseoPage({ params }: { params: Promise<Params> }) 
     return { ...s, r };
   });
 
-  const faqs = [
-    {
-      question: `What is the TikTok Shop referral fee for ${cat.title} in 2026?`,
-      answer: `TikTok Shop charges a ${(cat.rate * 100).toFixed(0)}% referral fee on ${cat.title} sales in the US (2026 schedule). ${cat.rate === 0.05 ? "This is the reduced rate that applies to precious jewelry and pre-owned items." : "This is the standard rate."} New sellers get 3% for their first 30 days. Sales tax on the referral fee applies post-November 2025.`,
-    },
-    {
-      question: `What creator commission should I offer for ${cat.title}?`,
-      answer: `Open Plan creators in ${cat.title} typically take ${(cat.creatorBand[0] * 100).toFixed(0)}–${(cat.creatorBand[1] * 100).toFixed(0)}%. Targeted Plans run higher (often 25%+) but deliver 2–3× the conversion rate. Use the calculator to see how a 5% shift in commission changes your net.`,
-    },
-    {
-      question: `What's a healthy profit margin for ${cat.title} on TikTok Shop?`,
-      answer: `Most successful TikTok Shop sellers in ${cat.title} target 20–30% net margin after every fee. Anything under 15% leaves no room for ad spend. The calculator's ROAS breakeven multiple tells you exactly how much ad spend each order can absorb.`,
-    },
-  ];
+  // Procedural copy — every section below is driven by the category's
+  // attributes (rate, weight tier, creator band, refund rate, AOV bracket,
+  // intent class) so the 60 pSEO pages render genuinely different prose
+  // instead of the same template with the title swapped.
+  const copy = generatePseoCopy(cat, workedExamples[1].r);
+  const faqs = copy.faqs;
 
   const related = cat.related
     .map((s) => getCategory(s))
@@ -153,12 +156,24 @@ export default async function PseoPage({ params }: { params: Promise<Params> }) 
         Pricing {cat.title.toLowerCase()} on TikTok Shop without giving up{" "}
         <span className="text-accent">{(cat.rate * 100).toFixed(0)}%+ in fees</span> (2026)
       </h1>
-      <p style={{ fontSize: "1.125rem", lineHeight: 1.6, maxWidth: 720 }} className="text-muted">
-        {cat.hookAngle}
-      </p>
+      <div style={{ maxWidth: 760, marginTop: "1rem" }}>
+        {copy.intro.map((p, i) => (
+          <p
+            key={i}
+            className={i === 0 ? undefined : "text-muted"}
+            style={{
+              fontSize: i === 0 ? "1.125rem" : "1rem",
+              lineHeight: 1.65,
+              margin: "0 0 1rem",
+            }}
+          >
+            {p}
+          </p>
+        ))}
+      </div>
 
       <div style={{ marginTop: "2rem" }}>
-        <Calculator categorySlug={cat.slug} />
+        <Calculator initial={initial} />
       </div>
 
       <section style={{ marginTop: "3rem" }}>
@@ -193,49 +208,45 @@ export default async function PseoPage({ params }: { params: Promise<Params> }) 
         </div>
       </section>
 
-      <section style={{ marginTop: "3rem" }}>
-        <h2>Common mistakes</h2>
-        <ul>
-          <li>
-            Treating creator commission as a flat percentage when it&apos;s actually paid only on
-            item subtotal — shipping doesn&apos;t count toward the calculation.
-          </li>
-          <li>
-            Forgetting the 30-day rate-lock on creator commission — you can&apos;t drop a rate
-            once it&apos;s set during a live campaign.
-          </li>
-          <li>
-            Missing the platform-funded discount paradox: when TikTok funds a discount, the
-            referral fee is still charged on the <em>pre-discount</em> price.
-          </li>
-          <li>
-            Letting Shop Performance Score drop below 4 — the return shipping split flips from
-            20/80 to 50/50 overnight.
-          </li>
+      <section style={{ marginTop: "3rem", maxWidth: 760 }}>
+        <h2>{copy.feeStackTitle}</h2>
+        {copy.feeStackParagraphs.map((p, i) => (
+          <p key={i} style={{ lineHeight: 1.65, margin: "0 0 1rem" }}>
+            {p}
+          </p>
+        ))}
+      </section>
+
+      <section style={{ marginTop: "3rem", maxWidth: 760 }}>
+        <h2>{copy.mistakesTitle}</h2>
+        <ul style={{ lineHeight: 1.65, paddingLeft: "1.25rem" }}>
+          {copy.mistakes.map((m, i) => (
+            <li key={i} style={{ marginBottom: "0.75rem" }}>
+              {m}
+            </li>
+          ))}
         </ul>
       </section>
 
-      <section style={{ marginTop: "3rem" }}>
-        <h2>Recommendations</h2>
-        <ul>
-          <li>
-            Aim for <strong>20%+ net margin</strong> after every fee in this category. Anything
-            less and you have no room for paid acquisition.
-          </li>
-          <li>
-            Test creator commission in the <strong>{(cat.creatorBand[0] * 100).toFixed(0)}–
-            {((cat.creatorBand[0] + cat.creatorBand[1]) / 2 * 100).toFixed(0)}%
-            </strong>{" "}
-            range first — graduate to Targeted Plans only after you&apos;ve nailed the offer.
-          </li>
-          <li>
-            If you ship at <strong>{cat.weightTierDefault}</strong>, the FBT multi-unit discount
-            kicks in at units ≥ 2 — bundle to win.
-          </li>
-          <li>
-            Watch your Shop Performance Score weekly. Falling below 4 is the silent margin killer
-            in {cat.title.toLowerCase()}.
-          </li>
+      <section style={{ marginTop: "3rem", maxWidth: 760 }}>
+        <h2>{copy.recommendationsTitle}</h2>
+        <ul style={{ lineHeight: 1.65, paddingLeft: "1.25rem" }}>
+          {copy.recommendations.map((rec, i) => (
+            <li key={i} style={{ marginBottom: "0.75rem" }}>
+              {rec}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section style={{ marginTop: "3rem", maxWidth: 760 }}>
+        <h2>{copy.checklistTitle}</h2>
+        <ul style={{ lineHeight: 1.65, paddingLeft: "1.25rem" }}>
+          {copy.checklist.map((item, i) => (
+            <li key={i} style={{ marginBottom: "0.75rem" }}>
+              {item}
+            </li>
+          ))}
         </ul>
       </section>
 
