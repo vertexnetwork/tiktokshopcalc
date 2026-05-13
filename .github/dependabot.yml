@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      next:
+        patterns: ["next", "@next/*", "eslint-config-next"]
+      react:
+        patterns: ["react", "react-dom", "@types/react*"]
+      dev:
+        patterns: ["@types/*", "eslint*", "prettier", "typescript", "vitest", "tsx"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

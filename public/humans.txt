@@ -1,0 +1,10 @@
+/* TEAM */
+  Maintainer: Vertex Network
+  Site: https://github.com/vertexnetwork/tiktokshopcalc
+  Contact: hello [at] tiktokshopcalc.tools
+
+/* SITE */
+  Last update: 2026/05/12
+  Standards: HTML5, CSS3, ES2022
+  Components: Next.js 15, React 19, Tailwind v4, TypeScript
+  Hosting: Vercel

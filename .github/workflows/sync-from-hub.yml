@@ -1,0 +1,53 @@
+name: Sync from vertex-network-hub
+
+on:
+  repository_dispatch:
+    types: [vertex-hub-sync]
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  HUB_RAW: https://raw.githubusercontent.com/vertexnetwork/hub/main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure public/ exists
+        run: mkdir -p public
+
+      - name: Sync network.json
+        run: curl -fsSL "$HUB_RAW/config/network.json" -o public/network.json
+
+      - name: Sync ai-bots.json
+        run: curl -fsSL "$HUB_RAW/config/ai-bots.json" -o public/ai-bots.json
+
+      # Opt-in: uncomment to also sync ads.txt / app-ads.txt / humans.txt
+      # - name: Sync ads.txt
+      #   run: curl -fsSL "$HUB_RAW/crawler/ads.txt" -o public/ads.txt
+      # - name: Sync app-ads.txt
+      #   run: curl -fsSL "$HUB_RAW/crawler/app-ads.txt" -o public/app-ads.txt
+      # - name: Sync humans.txt
+      #   run: curl -fsSL "$HUB_RAW/crawler/humans.txt" -o public/humans.txt
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: hub-sync
+          delete-branch: true
+          commit-message: "chore: sync from vertex-network-hub"
+          title: "chore: sync from vertex-network-hub"
+          labels: |
+            hub-sync
+            automated
+          body: |
+            Automated sync triggered by ${{ github.event_name }}.
+
+            Hub commit: ${{ github.event.client_payload.hub_sha || 'n/a (cron)' }}

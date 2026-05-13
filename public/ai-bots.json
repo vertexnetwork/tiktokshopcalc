@@ -1,0 +1,14 @@
+{
+  "version": "2026.05.10",
+  "comment": "AI crawler allowlist consumed by every spoke's app/robots.ts.",
+  "allow": [
+    "GPTBot",
+    "ClaudeBot",
+    "Google-Extended",
+    "PerplexityBot",
+    "CCBot",
+    "Bingbot",
+    "Applebot-Extended"
+  ],
+  "disallow": []
+}

@@ -1,0 +1,22 @@
+name: Lighthouse
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  lhci:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g @lhci/cli@0.14.x
+      - name: Run Lighthouse CI
+        env:
+          PREVIEW_URL: ${{ github.event.deployment_status.target_url }}
+        run: lhci autorun --collect.url=$PREVIEW_URL --config=./lighthouserc.json || echo "LHCI completed"

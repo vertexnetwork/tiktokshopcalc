@@ -1,0 +1,19 @@
+name: Sitemap ping
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping IndexNow (Bing)
+        run: |
+          curl -fsSL "https://www.bing.com/indexnow?url=https://tiktokshopcalc.tools/sitemap.xml" || true
+      - name: Ping Google sitemap (legacy, best-effort)
+        run: |
+          curl -fsSL "https://www.google.com/ping?sitemap=https://tiktokshopcalc.tools/sitemap.xml" || true
