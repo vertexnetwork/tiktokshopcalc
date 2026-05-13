@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
   experimental: {
     mdxRs: false,
   },
+  // ESLint rules are currently minimal (see eslint.config.mjs comment).
+  // typecheck + vitest already gate the build via CI, so we don't need
+  // `next build` to re-run lint. Re-enable this once the eslint-config-next
+  // flat-config migration lands.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async headers() {
     const csp = buildCSP({
       vercelAnalytics: true,

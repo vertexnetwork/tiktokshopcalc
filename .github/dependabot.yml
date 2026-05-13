@@ -11,6 +11,20 @@ updates:
         patterns: ["react", "react-dom", "@types/react*"]
       dev:
         patterns: ["@types/*", "eslint*", "prettier", "typescript", "vitest", "tsx"]
+    # Foundational dev tools: minor + patch only. Major bumps on these
+    # land in a dedicated PR after the breaking changes are reviewed
+    # one at a time. We learned this the hard way when a grouped
+    # 4-major-version bump (eslint 9→10, typescript 5→6, vitest 2→4,
+    # @types/node 22→25) broke `next build` on the auto-generated PR.
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
