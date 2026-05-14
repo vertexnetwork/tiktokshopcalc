@@ -1,6 +1,6 @@
 {
   "version": "2026.05.10",
-  "comment": "AI crawler allowlist consumed by every spoke's app/robots.ts.",
+  "comment": "AI crawler allowlist consumed by every spoke's app/robots.ts. Add a bot here once and it propagates network-wide.",
   "allow": [
     "GPTBot",
     "ClaudeBot",

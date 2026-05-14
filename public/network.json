@@ -1,6 +1,6 @@
 {
   "$schema": "./network.schema.json",
-  "version": "2026.05.12",
+  "version": "2026.05.10",
   "brand": "Vertex Network",
   "sites": [
     {
@@ -46,17 +46,6 @@
       "audience": "Shopify store owners and developers",
       "tags": ["shopify", "fonts", "design"],
       "status": "live"
-    },
-    {
-      "slug": "tiktokshopcalc",
-      "name": "TikTok Shop Calc",
-      "domain": "tiktokshopcalc.tools",
-      "url": "https://tiktokshopcalc.tools",
-      "tagline": "See your true TikTok Shop margin before the fees eat it.",
-      "description": "Free 2026 TikTok Shop profit calculator. Browser math, no signup.",
-      "audience": "TikTok Shop sellers and creator-affiliate brands",
-      "tags": ["tiktok-shop", "calculator", "ecommerce"],
-      "status": "soon"
     },
     {
       "slug": "tokenmath",
